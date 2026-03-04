@@ -1,20 +1,26 @@
 package io.team2.Service;
 
 
-import io.team2.Config.DbConn;
 import io.team2.Model.Product;
+import io.team2.Model.constant.ChangeType;
+import io.team2.Model.constant.CommitStatus;
 import io.team2.Utils.Color;
+import io.team2.Utils.InputValidation;
 
 import java.io.*;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.sql.SQLException;
+import java.util.*;
 
 public class ProductServiceImpl implements ProductService {
     private final Connection con;
+    private final Map<Product, ChangeType> stagedProduct = new LinkedHashMap<>();
     private static final String ROW_FILE = "set_row.txt";
     private static int DEFAULT_ROW_SIZE = 10;
     private static final int MIN_ROW_SIZE = 1;
@@ -121,4 +127,137 @@ public class ProductServiceImpl implements ProductService {
         return foundProduct;
     }
 
+
+    // Add product by Chhun Panha
+    @Override
+    public void addProduct(Product product) {
+        String sql = "SELECT count(id) FROM products";
+        try(
+            PreparedStatement ps = con.prepareStatement(sql);
+        ) {
+           ResultSet rs = ps.executeQuery();
+           if(rs.next()) {
+               int id = rs.getInt(1);
+
+               System.out.println("ID " + (id + 1));
+               String productName = InputValidation.readProductName(Color.ANSI_YELLOW + " => Enter Product Name: " + Color.ANSI_RESET);
+               double unitPrice = InputValidation.readProductPrice(Color.ANSI_YELLOW + "=> Enter Product price: " + Color.ANSI_RESET);
+               int qty = InputValidation.readNumber(Color.ANSI_YELLOW + "=> Enter Product qty: " + Color.ANSI_RESET);
+               product.setName(productName);
+               product.setUnitPrice(unitPrice);
+               product.setQuantity(qty);
+               stagedProduct.put(product, ChangeType.ADDED);
+
+           }
+
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    @Override
+    public List<Product> getPendingChanges(ChangeType changeType) {
+        return stagedProduct.entrySet()
+                .stream()
+                .filter(e -> e.getValue() == changeType)
+                .map(Map.Entry::getKey)
+                .toList();
+    }
+
+
+    @Override
+    public boolean checkIfNameExists(String name) throws SQLException {
+        try (PreparedStatement stmt = con.prepareStatement("SELECT EXISTS(SELECT 1 FROM products WHERE name = ?)")) {
+            stmt.setString(1, name);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getBoolean(1);
+                }
+            }
+        }
+        return false;
+    }
+
+
+
+    @Override
+    public Map<CommitStatus, List<Product>> saveChange(ChangeType type) throws SQLException {
+
+        Map<CommitStatus, List<Product>> result = new EnumMap<>(CommitStatus.class);
+        result.put(CommitStatus.INSERTED, new ArrayList<>());
+        result.put(CommitStatus.UPDATED, new ArrayList<>());
+        result.put(CommitStatus.CONFLICTED, new ArrayList<>());
+
+        String inComm = """
+                INSERT INTO products(name, unit_price, quantity)
+                VALUES (?, ?, ?)
+                ON CONFLICT (name) DO NOTHING
+                RETURNING name
+                """;
+
+        String upComm = """
+                UPDATE products SET name = ?, unit_price = ?, quantity = ?, imported_date = ?
+                WHERE id = ?
+                """;
+
+        try {
+            con.setAutoCommit(false);
+            switch (type) {
+                case ADDED -> {
+                    try (PreparedStatement inStmt = con.prepareStatement(inComm)) {
+
+                        for (Map.Entry<Product, ChangeType> entry : stagedProduct.entrySet()) {
+                            if (entry.getValue() != ChangeType.ADDED) continue;
+
+                            Product prod = entry.getKey();
+
+                            inStmt.setString(1, prod.getName());
+                            inStmt.setDouble(2, prod.getUnitPrice());
+                            inStmt.setInt(3, prod.getQuantity());
+                            inStmt.executeQuery();
+
+                            try (ResultSet rs = inStmt.getResultSet()) {
+                                if (rs != null && rs.next()) {
+                                    result.get(CommitStatus.INSERTED).add(prod);
+                                } else {
+                                    result.get(CommitStatus.CONFLICTED).add(prod);
+                                }
+                            }
+                        }
+                    }
+                }
+                case MODIFIED -> {
+                    try (PreparedStatement upStmt = con.prepareStatement(upComm)) {
+                        for (Map.Entry<Product, ChangeType> entry : stagedProduct.entrySet()) {
+                            if (entry.getValue() != ChangeType.MODIFIED) continue;
+
+                            Product prod = entry.getKey();
+                            upStmt.setString(1, prod.getName());
+                            upStmt.setDouble(2, prod.getUnitPrice());
+                            upStmt.setInt(3, prod.getQuantity());
+                            upStmt.setDate(4, Date.valueOf( prod.getImportedDate()));
+                            upStmt.setInt(5, prod.getId());
+                            int affected = upStmt.executeUpdate();
+
+                            if (affected > 0) {
+                                result.get(CommitStatus.UPDATED).add(prod);
+                            } else {
+                                result.get(CommitStatus.CONFLICTED).add(prod);
+                            }
+                        }
+                    }
+                }
+            }
+
+            con.commit();
+            stagedProduct.entrySet()
+                    .removeIf(e -> e.getValue() == type);
+
+        } catch (SQLException e) {
+            con.rollback();
+            throw e;
+        }
+        return result;
+    }
 }
