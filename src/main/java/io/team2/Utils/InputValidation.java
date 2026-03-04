@@ -8,11 +8,11 @@ public class InputValidation {
     private static String readInput(String message, Predicate<String> validateInput, String errorMessage) {
         while(true) {
             System.out.print(message);
-            String s = scanner.nextLine();
+            String s = scanner.nextLine().trim();
             if(validateInput.test(s)) {
                 return s;
             } else {
-                System.err.println(errorMessage);
+                System.out.println(Color.ANSI_RED + errorMessage + Color.ANSI_RESET);
             }
         }
     }
@@ -22,6 +22,12 @@ public class InputValidation {
     }
 
     public static String readLetter(String message) {
-        return readInput(message, s -> s.matches("^[a-zA-z]+$"), "Invalid Input");
+        return readInput(message, s -> s.matches("^[a-zA-Z]+$"), "Invalid Input");
+    }
+
+    public static String readMenu(String message) {
+
+        // Needs to accept number or else the return string won't be passed into switch in method handleOperation() of ProductController
+        return readInput(message, s -> s.matches("^[a-zA-Z|0-9]+$"), "Invalid Input");
     }
 }

@@ -6,7 +6,8 @@
     - **Config/**: This is for class for configuring the project.
     - **Model/**: this is for db entities ( tables ).
     - **Service/**: This is for business logic and db call class .
-    - **Util/**: This is for the utility class.
+    - **Utils/**: This is for the utility class.
+    - **Controller/**: This for handling application logic.
     - **View/**: This is for console UI class.
     - `Main.java`
 
