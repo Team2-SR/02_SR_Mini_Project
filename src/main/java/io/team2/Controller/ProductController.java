@@ -69,7 +69,7 @@ public class ProductController {
         System.out.println("\n");
 
         crudOperation.forEach((key, value) -> {
-            if (key.equals("Sa")) {
+            if(key.equals("Sa")) {
                 System.out.println();
                 System.out.print(" ".repeat(5) + Color.ANSI_GREEN + key + ")" + Color.ANSI_RESET + " " + value + " ".repeat(5));
             } else {
@@ -91,9 +91,13 @@ public class ProductController {
             case "G" -> handleGoToPage();
             case "W" -> handleAddProduct() ;
 //            case "R" -> ;
+//            case "W" -> ;
+            case "R" -> handleGetById();
 //            case "U" -> ;
 //            case "D" -> ;
             case "S" -> handleSearchByName() ;
+            case "D" -> handleDelete();
+//            case "S" -> ;
             case "SE" -> handleSetRow();
             case "SA" -> handleSaveData();
             case "UN" -> handleUnSave();
@@ -150,6 +154,32 @@ public class ProductController {
         displayMenu();
     }
 
+    private void handleDelete() {
+        int id = InputValidation.readNumber("Enter ID to delete: ");
+
+        if (id <= 0) {
+            System.out.println(Color.ANSI_RED + "Invalid ID. Must be > 0." + Color.ANSI_RESET);
+            displayMenu();
+            return;
+        }
+
+        service.deleteProduct(id);
+
+        showCurrentPage();
+        displayMenu();
+    }
+
+    private void handleGetById() {
+        Product prod = service.getProductByid(InputValidation.readNumber("Enter ID to search: "));
+        if(prod == null){
+            System.out.println("The product does not exist");
+            display();
+            return;
+        }
+        view.displayProductById(prod);
+        displayMenu();
+
+    }
     private Integer handleExit() {
         return null;
     }

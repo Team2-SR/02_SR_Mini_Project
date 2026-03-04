@@ -24,4 +24,18 @@ public class ProductView {
                 totalPages,
                 totalRecords);
     }
+
+    public void displayProductById(Product product) {
+        String[] columns = {"ID", "Name", "Unit Price", "Qty", "Import Date"};
+        int[] minWidths = {15, 30, 20, 15, 25};
+        int[] maxWidths = {15, 30, 20, 15, 25};
+
+        List<String> headers = new ArrayList<>(Arrays.asList(columns));
+        TableTextFormatter.createTableProductById(
+                headers.size(),
+                product,
+                headers,
+                minWidths,
+                maxWidths);
+    }
 }

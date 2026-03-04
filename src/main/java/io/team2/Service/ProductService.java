@@ -19,4 +19,6 @@ public interface ProductService {
     boolean checkIfNameExists(String name) throws SQLException;
     List<Product> getPendingChanges(ChangeType changeType);
     List<Product> searchByName(String name);
+    void deleteProduct(int id);
+    Product getProductByid(int id);
 }
