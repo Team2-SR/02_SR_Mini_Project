@@ -2,6 +2,8 @@ package io.team2.Controller;
 
 import io.team2.Config.DbConn;
 import io.team2.Model.Product;
+import io.team2.Model.constant.ChangeType;
+import io.team2.Model.constant.CommitStatus;
 import io.team2.Service.ProductService;
 import io.team2.Service.ProductServiceImpl;
 import io.team2.Utils.Color;
@@ -12,20 +14,18 @@ import java.sql.SQLException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 
 public class ProductController {
     private final ProductService service;
     private final ProductView view;
-
-    private int currentPage = 1;
-
     private final String MENU_DISPLAY = " ".repeat(40) + "_".repeat(10) + " Menu " + "_".repeat(10);
+    private int currentPage = 1;
 
     public ProductController() throws SQLException {
         this.service = new ProductServiceImpl(DbConn.getConnection());
         this.view = new ProductView();
     }
+
 
     public void display() {
         showCurrentPage();
@@ -69,7 +69,7 @@ public class ProductController {
         System.out.println("\n");
 
         crudOperation.forEach((key, value) -> {
-            if(key.equals("Sa")) {
+            if (key.equals("Sa")) {
                 System.out.println();
                 System.out.print(" ".repeat(5) + Color.ANSI_GREEN + key + ")" + Color.ANSI_RESET + " " + value + " ".repeat(5));
             } else {
@@ -95,8 +95,8 @@ public class ProductController {
 //            case "D" -> ;
 //            case "S" -> ;
             case "SE" -> handleSetRow();
-//            case "Sa" -> ;
-//            case "Un" -> ;
+            case "SA" -> handleSaveData();
+            case "UN" -> handleUnSave();
 //            case "Ba" -> ;
 //            case "Re" -> ;
             case "E" -> handleExit();
@@ -145,7 +145,7 @@ public class ProductController {
     }
 
     private void handleSetRow() {
-        service.setRow(InputValidation.readNumber(Color.ANSI_YELLOW  + "Set row to display per page: " + Color.ANSI_RESET));
+        service.setRow(InputValidation.readNumber(Color.ANSI_YELLOW + "Set row to display per page: " + Color.ANSI_RESET));
         showCurrentPage();
         displayMenu();
     }
@@ -159,4 +159,61 @@ public class ProductController {
         return (int) Math.ceil((double) totalProducts / rows);
     }
 
+    private void handleSaveData() {
+        ChangeType changeType = readChangeType();
+        if (changeType == null) {
+            showCurrentPage();
+            displayMenu();
+            return;
+        }
+        try {
+            Map<CommitStatus, List<Product>> result = service.saveChange(changeType);
+
+            if (result.values().stream().allMatch(List::isEmpty)) {
+                System.out.println(Color.ANSI_YELLOW + "No pending changes to save." + Color.ANSI_RESET);
+                showCurrentPage();
+                displayMenu();
+                return;
+            }
+
+            result.forEach((status, products) -> {
+                if (!products.isEmpty()) {
+                    String color = status == CommitStatus.CONFLICTED ? Color.ANSI_RED : Color.ANSI_GREEN;
+                    System.out.println(color + status + ": " + Color.ANSI_RESET);
+                    view.displayProducts(products, 1, 1, products.size());
+                }
+            });
+
+            showCurrentPage();
+            displayMenu();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private ChangeType readChangeType() {
+        System.out.println(Color.ANSI_GREEN.concat("'ui'").concat(Color.ANSI_RESET) + " for viewing insert products and" + Color.ANSI_GREEN.concat(" 'uu' ").concat(Color.ANSI_RESET) + "for viewing update products or " + Color.ANSI_RED.concat("'b'") + Color.ANSI_RESET + " for back to menu");
+        String input = InputValidation.readMenu("Enter your option : ").toLowerCase();
+        while (!input.equals("ui") && !input.equals("uu") && !input.equals("b")) {
+            System.out.println(Color.ANSI_RED + "Invalid input! Please enter 'ui', 'uu', or 'b'." + Color.ANSI_RESET);
+            input = InputValidation.readMenu("Enter save type: ").toLowerCase(); // <-- missing here
+        }
+
+        return switch (input) {
+            case "ui" -> ChangeType.ADDED;
+            case "uu" -> ChangeType.MODIFIED;
+            default -> null;
+        };
+    }
+
+    private void handleUnSave() {
+        ChangeType changeType = readChangeType();
+        if (changeType == null) {
+            displayMenu();
+            return;
+        }
+        List<Product> pendingProducts = service.getPendingChanges(changeType);
+        view.displayProducts(pendingProducts, 1, 1, pendingProducts.size());
+        displayMenu();
+    }
 }
