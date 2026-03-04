@@ -172,10 +172,6 @@ public class ProductController {
 
     // BACKUP
     private void backupDatabase() throws Exception {
-        //        String fileName = dotenv.get("BACKUP_FOLDER") + "backup_"
-//                + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date())
-//                + ".backup";
-
         String backupFolderPath = dotenv.get("BACKUP_FOLDER");
 
         // Create folder
@@ -229,11 +225,12 @@ public class ProductController {
             System.out.println("❌ Backup failed");
         }
 
+        System.out.println();
         display();
     }
 
     // RESTORE MENU
-    private static void restoreMenu(Connection connection, Scanner scanner) throws Exception {
+    private void restoreMenu(Connection connection, Scanner scanner) throws Exception {
 
         File folder = new File(dotenv.get("BACKUP_FOLDER"));
         File[] files = folder.listFiles((dir, name) -> name.endsWith(".backup"));
@@ -269,13 +266,18 @@ public class ProductController {
 
         if (choice < 1 || choice > files.length) {
             System.out.println(ANSI_YELLOW + "Invalid selection" + ANSI_RESET);
+            System.out.println();
+            display();
             return;
         }
 
         restoreFromFile(files[choice - 1].getPath());
+
+        System.out.println();
+        display();
     }
 
-    private static void restoreFromFile(String filePath) throws Exception {
+    private void restoreFromFile(String filePath) throws Exception {
 
         ProcessBuilder pb = new ProcessBuilder(
                 "C:\\Program Files\\PostgreSQL\\15\\bin\\pg_restore.exe",
@@ -304,6 +306,8 @@ public class ProductController {
         int exitCode = process.waitFor();
         System.out.println(exitCode == 0 ? ANSI_GREEN + "Database restore successful" + ANSI_RESET : ANSI_RED + "Restore failed" + ANSI_RESET);
 
+        System.out.println();
+        display();
 
     }
 
