@@ -151,7 +151,18 @@ public class ProductController {
     }
 
     private void handleDelete() {
+        int id = InputValidation.readNumber("Enter ID to delete: ");
 
+        if (id <= 0) {
+            System.out.println(Color.ANSI_RED + "Invalid ID. Must be > 0." + Color.ANSI_RESET);
+            displayMenu();
+            return;
+        }
+
+        service.deleteProduct(id);
+
+        showCurrentPage();
+        displayMenu();
     }
 
     private void handleGetById() {
