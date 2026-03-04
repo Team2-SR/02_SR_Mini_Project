@@ -1,5 +1,6 @@
 package io.team2.Model;
 
+import java.sql.Date;
 import java.time.LocalDate;
 
 public class Product {
@@ -8,6 +9,7 @@ public class Product {
     private double unitPrice;
     private int quantity;
     private LocalDate importedDate;
+
 
     public int getId() {
         return id;
