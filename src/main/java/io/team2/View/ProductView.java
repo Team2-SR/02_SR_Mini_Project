@@ -1,10 +1,8 @@
 package io.team2.View;
 
 import io.team2.Model.Product;
-import io.team2.Service.ProductService;
 import io.team2.Utils.TableTextFormatter;
 
-import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

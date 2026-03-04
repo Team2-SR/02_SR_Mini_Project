@@ -20,6 +20,7 @@ public class ProductServiceImpl implements ProductService {
     private static final int MAX_ROW_SIZE = 100;
     public ProductServiceImpl(Connection connection) {
         this.con = connection;
+        this.setRow(DEFAULT_ROW_SIZE);
     }
 
     @Override
