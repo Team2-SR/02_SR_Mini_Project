@@ -3,10 +3,9 @@ package io.team2.Service;
 
 import io.team2.Config.DbConn;
 import io.team2.Model.Product;
+import io.team2.Utils.Color;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileReader;
+import java.io.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -15,43 +14,76 @@ import java.util.List;
 
 public class ProductServiceImpl implements ProductService {
     private final Connection con;
+    private static final String ROW_FILE = "set_row.txt";
+    private static int DEFAULT_ROW_SIZE = 10;
+    private static final int MIN_ROW_SIZE = 1;
+    private static final int MAX_ROW_SIZE = 100;
     public ProductServiceImpl(Connection connection) {
         this.con = connection;
     }
 
+    @Override
     public void setRow(int inputRow) {
-        try(FileOutputStream output = new FileOutputStream("set_row.txt");) {
-            output.write(inputRow);
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (inputRow < MIN_ROW_SIZE || inputRow > MAX_ROW_SIZE) {
+            System.out.println(Color.ANSI_RED + "Invalid row size! Must be between " + MIN_ROW_SIZE + " and " + MAX_ROW_SIZE + Color.ANSI_RESET);
+            return;
         }
-    }
 
-    public int getRow() {
-        int rows = 0;
-        try(FileReader row = new FileReader("set_row.txt")) {
-            rows = row.read();
-        } catch (Exception e) {
-            e.printStackTrace();
+        try (FileWriter writer = new FileWriter(ROW_FILE)) {
+            writer.write(String.valueOf(inputRow));
+            System.out.println(Color.ANSI_GREEN + "Row size saved successfully!" + Color.ANSI_RESET);
+        } catch (IOException e) {
+            System.err.println(Color.ANSI_RED + "Error saving row size: " + e.getMessage() + Color.ANSI_RESET);
         }
-        return rows;
     }
 
     @Override
-    public List<Product> showProduct() {
-        int rows = getRow();
-        int currentPage = 0;
+    public int getRow() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(ROW_FILE))) {
+            String line = reader.readLine();
+            if (line != null && !line.trim().isEmpty()) {
+                int rowSize = Integer.parseInt(line.trim());
+                if (rowSize >= MIN_ROW_SIZE && rowSize <= MAX_ROW_SIZE) {
+                    return rowSize;
+                }
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println(Color.ANSI_YELLOW + "Note: " + ROW_FILE + " not found, using default: " + DEFAULT_ROW_SIZE + Color.ANSI_RESET);
+        } catch (IOException | NumberFormatException e) {
+            System.err.println(Color.ANSI_YELLOW + "Warning: Could not read " + ROW_FILE + ", using default: " + DEFAULT_ROW_SIZE + Color.ANSI_RESET);
+        }
+        return DEFAULT_ROW_SIZE;
+    }
+
+    @Override
+    public int getProductSize() {
+        String sql = "SELECT count(*) FROM products";
+        try {
+            ResultSet rs = con.createStatement().executeQuery(sql);
+            if(rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    @Override
+    public List<Product> showProduct(int currentPage, int pageSize) {
+        int offset = (currentPage - 1) * pageSize;
         List<Product> products = new ArrayList<>();
+        String sql = "SELECT * FROM products " +
+                "ORDER BY id " +
+                "OFFSET ? ROWS " +
+                "FETCH NEXT ? ROWS ONLY";
+
         try(
-
-                Connection con = DbConn.getConnection();
-                PreparedStatement ps = con.prepareStatement("SELECT * " +
-                        "FROM products" +
-                        "ORDER BY ? OFFSET (page_number - 1) * page_sizes ROWS" +
-                        "FETCH NEXT ? ROWS ONLY");
-
-                ResultSet rs = ps.executeQuery()
+                PreparedStatement ps = con.prepareStatement(sql);
         ) {
+            ps.setInt(1, offset);
+            ps.setInt(2, pageSize);
+            ResultSet rs = ps.executeQuery();
             while(rs.next()) {
                 Product product = new Product();
                 product.setId(rs.getInt("id"));
