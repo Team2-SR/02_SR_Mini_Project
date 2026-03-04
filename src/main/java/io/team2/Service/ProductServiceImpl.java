@@ -102,15 +102,15 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public void deleteProduct(int id){
         String sql = "DELETE FROM products WHERE id =?";
-        PreparedStatement ps = null;
-        try {
-            ps = con.prepareStatement(sql);
-            {
-                ps.setInt(1,id);
-                ps.executeUpdate();
+        try(PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            if(ps.executeUpdate() == 0) {
+                System.out.println(Color.ANSI_RED + "ID Not Found" + Color.ANSI_RESET);
+            } else {
+                System.out.println(Color.ANSI_GREEN + "Deleted Successfully" + Color.ANSI_RESET);
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        }catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
