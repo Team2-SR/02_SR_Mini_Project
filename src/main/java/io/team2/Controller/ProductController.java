@@ -78,7 +78,7 @@ public class ProductController {
         });
         System.out.println();
         System.out.println(" ".repeat(40) + "_".repeat(26));
-        String input = InputValidation.readLetter(Color.ANSI_YELLOW + "=> Choose an option() : " + Color.ANSI_RESET);
+        String input = InputValidation.readMenu(Color.ANSI_YELLOW + "=> Choose an option() : " + Color.ANSI_RESET);
         handleOperation(input);
     }
 
@@ -101,7 +101,8 @@ public class ProductController {
 //            case "Re" -> ;
             case "E" -> handleExit();
             default -> {
-                System.out.println(Color.ANSI_RED + "Invalid option!" + Color.ANSI_RESET);
+                System.out.println(Color.ANSI_RED + "Invalid Option" + Color.ANSI_RESET);
+                showCurrentPage();
                 displayMenu();
             }
         }

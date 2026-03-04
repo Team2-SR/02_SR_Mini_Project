@@ -24,4 +24,10 @@ public class InputValidation {
     public static String readLetter(String message) {
         return readInput(message, s -> s.matches("^[a-zA-Z]+$"), "Invalid Input");
     }
+
+    public static String readMenu(String message) {
+
+        // Needs to accept number or else the return string won't be passed into switch in method handleOperation() of ProductController
+        return readInput(message, s -> s.matches("^[a-zA-Z|0-9]+$"), "Invalid Input");
+    }
 }
