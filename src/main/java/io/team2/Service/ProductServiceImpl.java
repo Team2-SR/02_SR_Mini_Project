@@ -9,6 +9,7 @@ import java.io.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -99,4 +100,25 @@ public class ProductServiceImpl implements ProductService {
         }
         return products;
     }
+    public List<Product> searchByName(String name)  {
+        List<Product> foundProduct = new ArrayList<>();
+        try (PreparedStatement stmt = con.prepareStatement("SELECT id,name,unit_price,quantity,imported_date FROM products WHERE name ILIKE CONCAT('%',?,'%') LIMIT 5")) {
+            stmt.setString(1, name);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Product product = new Product()
+                            .id(rs.getInt(1))
+                            .name(rs.getString(2))
+                            .unitPrice(rs.getDouble(3))
+                            .quantity(rs.getInt(4))
+                            .importedDate(rs.getDate(5).toLocalDate());
+                    foundProduct.add(product);
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return foundProduct;
+    }
+
 }

@@ -159,4 +159,11 @@ public class ProductController {
         return (int) Math.ceil((double) totalProducts / rows);
     }
 
+    private void handleSearchByName(){
+        List<Product > prods = service.searchByName(InputValidation.readMenu(Color.ANSI_YELLOW  + "Enter name to search: " + Color.ANSI_RESET));
+        view.displayProducts(prods,1,1,prods.size());
+        displayMenu();
+    }
+
+
 }

@@ -10,4 +10,5 @@ public interface ProductService {
     void setRow(int input);
     int getRow();
     int getProductSize();
+    List<Product> searchByName(String name);
 }
