@@ -25,6 +25,15 @@ public class InputValidation {
         return readInput(message, s -> s.matches("^[a-zA-Z]+$"), "Invalid Input");
     }
 
+    public static String readProductName(String message) {
+        return readInput(message, s -> s.matches("^[A-Za-z][A-Za-z0-9 +_-]*$"), "Invalid Input");
+    }
+
+    public static double readProductPrice(String message) {
+        return Double.parseDouble(readInput(message, s -> s.matches("^\\d+(\\.\\d{1,2})?$"), "Invalid Input"));
+    }
+
+    
     public static String readMenu(String message) {
 
         // Needs to accept number or else the return string won't be passed into switch in method handleOperation() of ProductController
