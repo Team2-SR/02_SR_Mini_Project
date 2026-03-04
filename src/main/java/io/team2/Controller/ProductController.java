@@ -93,7 +93,7 @@ public class ProductController {
 //            case "R" -> ;
 //            case "W" -> ;
             case "R" -> handleGetById();
-//            case "U" -> ;
+            case "U" -> handleUpdate();
 //            case "D" -> ;
             case "S" -> handleSearchByName() ;
             case "D" -> handleDelete();
@@ -253,6 +253,22 @@ public class ProductController {
     private void handleSearchByName(){
         List<Product > prods = service.searchByName(InputValidation.readMenu(Color.ANSI_YELLOW  + "Enter name to search: " + Color.ANSI_RESET));
         view.displayProducts(prods,1,1,prods.size());
+        displayMenu();
+    }
+
+    private void handleUpdate() {
+        int id = InputValidation.readNumber(Color.ANSI_YELLOW + "Enter ID to update: " + Color.ANSI_RESET);
+        Product existing = service.getProductByid(id);
+        if (existing == null) {
+            System.out.println(Color.ANSI_RED + "Product not found." + Color.ANSI_RESET);
+            showCurrentPage();
+            displayMenu();
+            return;
+        }
+        view.displayProductById(existing);
+        service.updateProduct(id, existing);
+        System.out.println(Color.ANSI_GREEN + "Product staged for update. Use 'Sa' to commit." + Color.ANSI_RESET);
+        showCurrentPage();
         displayMenu();
     }
 }

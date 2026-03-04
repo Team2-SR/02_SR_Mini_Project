@@ -78,6 +78,20 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public void updateProduct(int id, Product product) {
+        System.out.println("ID: " + id);
+        String productName = InputValidation.readProductName(Color.ANSI_YELLOW + " => Enter Product Name: " + Color.ANSI_RESET);
+        double unitPrice = InputValidation.readProductPrice(Color.ANSI_YELLOW + "=> Enter Product price: " + Color.ANSI_RESET);
+        int qty = InputValidation.readNumber(Color.ANSI_YELLOW + "=> Enter Product qty: " + Color.ANSI_RESET);
+        product.setId(id);
+        product.setName(productName);
+        product.setUnitPrice(unitPrice);
+        product.setQuantity(qty);
+        stagedProduct.put(product, ChangeType.MODIFIED);
+    }
+
+
+    @Override
     public List<Product> showProduct(int currentPage, int pageSize) {
         int offset = (currentPage - 1) * pageSize;
         List<Product> products = new ArrayList<>();
