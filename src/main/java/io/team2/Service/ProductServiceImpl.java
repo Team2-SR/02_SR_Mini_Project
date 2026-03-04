@@ -5,23 +5,41 @@ import io.team2.Model.Product;
 import io.team2.Model.constant.ChangeType;
 import io.team2.Model.constant.CommitStatus;
 import io.team2.Utils.Color;
+import io.team2.Utils.InputValidation;
 
 import java.io.*;
-import java.sql.*;
+import java.sql.Connection;
 import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 
 public class ProductServiceImpl implements ProductService {
-    private static final String ROW_FILE = "set_row.txt";
-    private static final int DEFAULT_ROW_SIZE = 10;
-    private static final int MIN_ROW_SIZE = 1;
-    private static final int MAX_ROW_SIZE = 100;
     private final Connection con;
     private final Map<Product, ChangeType> stagedProduct = new LinkedHashMap<>();
-
+    private static final String ROW_FILE = "set_row.txt";
+    private static int DEFAULT_ROW_SIZE = 10;
+    private static final int MIN_ROW_SIZE = 1;
+    private static final int MAX_ROW_SIZE = 100;
     public ProductServiceImpl(Connection connection) {
         this.con = connection;
         this.setRow(DEFAULT_ROW_SIZE);
+    }
+
+    @Override
+    public void setRow(int inputRow) {
+        if (inputRow < MIN_ROW_SIZE || inputRow > MAX_ROW_SIZE) {
+            System.out.println(Color.ANSI_RED + "Invalid row size! Must be between " + MIN_ROW_SIZE + " and " + MAX_ROW_SIZE + Color.ANSI_RESET);
+            return;
+        }
+
+        try (FileWriter writer = new FileWriter(ROW_FILE)) {
+            writer.write(String.valueOf(inputRow));
+            System.out.println(Color.ANSI_GREEN + "Row size saved successfully!" + Color.ANSI_RESET);
+        } catch (IOException e) {
+            System.err.println(Color.ANSI_RED + "Error saving row size: " + e.getMessage() + Color.ANSI_RESET);
+        }
     }
 
     @Override
@@ -43,26 +61,11 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public void setRow(int inputRow) {
-        if (inputRow < MIN_ROW_SIZE || inputRow > MAX_ROW_SIZE) {
-            System.out.println(Color.ANSI_RED + "Invalid row size! Must be between " + MIN_ROW_SIZE + " and " + MAX_ROW_SIZE + Color.ANSI_RESET);
-            return;
-        }
-
-        try (FileWriter writer = new FileWriter(ROW_FILE)) {
-            writer.write(String.valueOf(inputRow));
-            System.out.println(Color.ANSI_GREEN + "Row size saved successfully!" + Color.ANSI_RESET);
-        } catch (IOException e) {
-            System.err.println(Color.ANSI_RED + "Error saving row size: " + e.getMessage() + Color.ANSI_RESET);
-        }
-    }
-
-    @Override
     public int getProductSize() {
         String sql = "SELECT count(*) FROM products";
         try {
             ResultSet rs = con.createStatement().executeQuery(sql);
-            if (rs.next()) {
+            if(rs.next()) {
                 return rs.getInt(1);
             }
         } catch (Exception e) {
@@ -80,13 +83,13 @@ public class ProductServiceImpl implements ProductService {
                 "OFFSET ? ROWS " +
                 "FETCH NEXT ? ROWS ONLY";
 
-        try (
+        try(
                 PreparedStatement ps = con.prepareStatement(sql);
         ) {
             ps.setInt(1, offset);
             ps.setInt(2, pageSize);
             ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
+            while(rs.next()) {
                 Product product = new Product();
                 product.setId(rs.getInt("id"));
                 product.setName(rs.getString("name"));
@@ -99,6 +102,34 @@ public class ProductServiceImpl implements ProductService {
             e.printStackTrace();
         }
         return products;
+    }
+
+    // Add product by Chhun Panha
+    @Override
+    public void addProduct(Product product) {
+        String sql = "SELECT count(id) FROM products";
+        try(
+            PreparedStatement ps = con.prepareStatement(sql);
+        ) {
+           ResultSet rs = ps.executeQuery();
+           if(rs.next()) {
+               int id = rs.getInt(1);
+
+               System.out.println("ID " + (id + 1));
+               String productName = InputValidation.readProductName(Color.ANSI_YELLOW + " => Enter Product Name: " + Color.ANSI_RESET);
+               double unitPrice = InputValidation.readProductPrice(Color.ANSI_YELLOW + "=> Enter Product price: " + Color.ANSI_RESET);
+               int qty = InputValidation.readNumber(Color.ANSI_YELLOW + "=> Enter Product qty: " + Color.ANSI_RESET);
+               product.setName(productName);
+               product.setUnitPrice(unitPrice);
+               product.setQuantity(qty);
+               stagedProduct.put(product, ChangeType.ADDED);
+
+           }
+
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+
     }
 
     @Override
@@ -123,6 +154,7 @@ public class ProductServiceImpl implements ProductService {
         }
         return false;
     }
+
 
 
     @Override
@@ -180,7 +212,7 @@ public class ProductServiceImpl implements ProductService {
                             upStmt.setString(1, prod.getName());
                             upStmt.setDouble(2, prod.getUnitPrice());
                             upStmt.setInt(3, prod.getQuantity());
-                            upStmt.setDate(4, Date.valueOf(prod.getImportedDate()));
+                            upStmt.setDate(4, Date.valueOf( prod.getImportedDate()));
                             upStmt.setInt(5, prod.getId());
                             int affected = upStmt.executeUpdate();
 
@@ -204,5 +236,4 @@ public class ProductServiceImpl implements ProductService {
         }
         return result;
     }
-
 }
