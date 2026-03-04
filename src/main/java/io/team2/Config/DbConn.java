@@ -9,7 +9,7 @@ import java.sql.SQLException;
 
 public class DbConn {
 
-    private static final Dotenv dotenv = Dotenv.load();
+    public static final Dotenv dotenv = Dotenv.load();
 
     public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(

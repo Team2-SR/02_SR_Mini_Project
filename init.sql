@@ -1,4 +1,4 @@
-CREATE DATABASE kshrd_java_mini_proj;
+/CREATE DATABASE kshrd_java_mini_proj;
 
 CREATE TABLE IF NOT EXISTS products
 (
