@@ -1,41 +1,27 @@
 package io.team2.Service;
 
 
-import io.team2.Config.DbConn;
 import io.team2.Model.Product;
+import io.team2.Model.constant.ChangeType;
+import io.team2.Model.constant.CommitStatus;
 import io.team2.Utils.Color;
 
 import java.io.*;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.ArrayList;
-import java.util.List;
+import java.sql.*;
+import java.sql.Date;
+import java.util.*;
 
 public class ProductServiceImpl implements ProductService {
-    private final Connection con;
     private static final String ROW_FILE = "set_row.txt";
-    private static int DEFAULT_ROW_SIZE = 10;
+    private static final int DEFAULT_ROW_SIZE = 10;
     private static final int MIN_ROW_SIZE = 1;
     private static final int MAX_ROW_SIZE = 100;
+    private final Connection con;
+    private final Map<Product, ChangeType> stagedProduct = new LinkedHashMap<>();
+
     public ProductServiceImpl(Connection connection) {
         this.con = connection;
         this.setRow(DEFAULT_ROW_SIZE);
-    }
-
-    @Override
-    public void setRow(int inputRow) {
-        if (inputRow < MIN_ROW_SIZE || inputRow > MAX_ROW_SIZE) {
-            System.out.println(Color.ANSI_RED + "Invalid row size! Must be between " + MIN_ROW_SIZE + " and " + MAX_ROW_SIZE + Color.ANSI_RESET);
-            return;
-        }
-
-        try (FileWriter writer = new FileWriter(ROW_FILE)) {
-            writer.write(String.valueOf(inputRow));
-            System.out.println(Color.ANSI_GREEN + "Row size saved successfully!" + Color.ANSI_RESET);
-        } catch (IOException e) {
-            System.err.println(Color.ANSI_RED + "Error saving row size: " + e.getMessage() + Color.ANSI_RESET);
-        }
     }
 
     @Override
@@ -57,11 +43,26 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public void setRow(int inputRow) {
+        if (inputRow < MIN_ROW_SIZE || inputRow > MAX_ROW_SIZE) {
+            System.out.println(Color.ANSI_RED + "Invalid row size! Must be between " + MIN_ROW_SIZE + " and " + MAX_ROW_SIZE + Color.ANSI_RESET);
+            return;
+        }
+
+        try (FileWriter writer = new FileWriter(ROW_FILE)) {
+            writer.write(String.valueOf(inputRow));
+            System.out.println(Color.ANSI_GREEN + "Row size saved successfully!" + Color.ANSI_RESET);
+        } catch (IOException e) {
+            System.err.println(Color.ANSI_RED + "Error saving row size: " + e.getMessage() + Color.ANSI_RESET);
+        }
+    }
+
+    @Override
     public int getProductSize() {
         String sql = "SELECT count(*) FROM products";
         try {
             ResultSet rs = con.createStatement().executeQuery(sql);
-            if(rs.next()) {
+            if (rs.next()) {
                 return rs.getInt(1);
             }
         } catch (Exception e) {
@@ -79,13 +80,13 @@ public class ProductServiceImpl implements ProductService {
                 "OFFSET ? ROWS " +
                 "FETCH NEXT ? ROWS ONLY";
 
-        try(
+        try (
                 PreparedStatement ps = con.prepareStatement(sql);
         ) {
             ps.setInt(1, offset);
             ps.setInt(2, pageSize);
             ResultSet rs = ps.executeQuery();
-            while(rs.next()) {
+            while (rs.next()) {
                 Product product = new Product();
                 product.setId(rs.getInt("id"));
                 product.setName(rs.getString("name"));
@@ -99,4 +100,109 @@ public class ProductServiceImpl implements ProductService {
         }
         return products;
     }
+
+    @Override
+    public List<Product> getPendingChanges(ChangeType changeType) {
+        return stagedProduct.entrySet()
+                .stream()
+                .filter(e -> e.getValue() == changeType)
+                .map(Map.Entry::getKey)
+                .toList();
+    }
+
+
+    @Override
+    public boolean checkIfNameExists(String name) throws SQLException {
+        try (PreparedStatement stmt = con.prepareStatement("SELECT EXISTS(SELECT 1 FROM products WHERE name = ?)")) {
+            stmt.setString(1, name);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getBoolean(1);
+                }
+            }
+        }
+        return false;
+    }
+
+
+    @Override
+    public Map<CommitStatus, List<Product>> saveChange(ChangeType type) throws SQLException {
+
+        Map<CommitStatus, List<Product>> result = new EnumMap<>(CommitStatus.class);
+        result.put(CommitStatus.INSERTED, new ArrayList<>());
+        result.put(CommitStatus.UPDATED, new ArrayList<>());
+        result.put(CommitStatus.CONFLICTED, new ArrayList<>());
+
+        String inComm = """
+                INSERT INTO products(name, unit_price, quantity)
+                VALUES (?, ?, ?)
+                ON CONFLICT (name) DO NOTHING
+                RETURNING name
+                """;
+
+        String upComm = """
+                UPDATE products SET name = ?, unit_price = ?, quantity = ?, imported_date = ?
+                WHERE id = ?
+                """;
+
+        try {
+            con.setAutoCommit(false);
+            switch (type) {
+                case ADDED -> {
+                    try (PreparedStatement inStmt = con.prepareStatement(inComm)) {
+
+                        for (Map.Entry<Product, ChangeType> entry : stagedProduct.entrySet()) {
+                            if (entry.getValue() != ChangeType.ADDED) continue;
+
+                            Product prod = entry.getKey();
+
+                            inStmt.setString(1, prod.getName());
+                            inStmt.setDouble(2, prod.getUnitPrice());
+                            inStmt.setInt(3, prod.getQuantity());
+                            inStmt.executeQuery();
+
+                            try (ResultSet rs = inStmt.getResultSet()) {
+                                if (rs != null && rs.next()) {
+                                    result.get(CommitStatus.INSERTED).add(prod);
+                                } else {
+                                    result.get(CommitStatus.CONFLICTED).add(prod);
+                                }
+                            }
+                        }
+                    }
+                }
+                case MODIFIED -> {
+                    try (PreparedStatement upStmt = con.prepareStatement(upComm)) {
+                        for (Map.Entry<Product, ChangeType> entry : stagedProduct.entrySet()) {
+                            if (entry.getValue() != ChangeType.MODIFIED) continue;
+
+                            Product prod = entry.getKey();
+                            upStmt.setString(1, prod.getName());
+                            upStmt.setDouble(2, prod.getUnitPrice());
+                            upStmt.setInt(3, prod.getQuantity());
+                            upStmt.setDate(4, Date.valueOf(prod.getImportedDate()));
+                            upStmt.setInt(5, prod.getId());
+                            int affected = upStmt.executeUpdate();
+
+                            if (affected > 0) {
+                                result.get(CommitStatus.UPDATED).add(prod);
+                            } else {
+                                result.get(CommitStatus.CONFLICTED).add(prod);
+                            }
+                        }
+                    }
+                }
+            }
+
+            con.commit();
+            stagedProduct.entrySet()
+                    .removeIf(e -> e.getValue() == type);
+
+        } catch (SQLException e) {
+            con.rollback();
+            throw e;
+        }
+        return result;
+    }
+
 }
