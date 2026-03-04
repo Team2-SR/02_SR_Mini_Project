@@ -53,5 +53,31 @@ public class TableTextFormatter {
         return "Page : " + Color.ANSI_YELLOW + currentPage + Color.ANSI_RESET +
                 " of " + Color.ANSI_RED + totalPages + Color.ANSI_RESET;
     }
+
+    public static void createTableProductById(
+            int columns,
+            Product product,
+            List<String> cells,
+            int[] minWidths,
+            int[] maxWidths
+    ){
+        Table table = new Table(5,BorderStyle.UNICODE_BOX, ShownBorders.ALL);
+        CellStyle centerStyle = new CellStyle(CellStyle.HorizontalAlign.CENTER);
+
+        for(int i = 0; i < columns ; i ++ ){
+            table.setColumnWidth(i, minWidths[i], maxWidths[i]);
+        }
+
+        for (String cell : cells) {
+            table.addCell(Color.ANSI_CYAN + cell + Color.ANSI_RESET, centerStyle);
+        }
+        table.addCell(Color.ANSI_GREEN + product.getId() + Color.ANSI_RESET, centerStyle);
+        table.addCell(product.getName(), centerStyle);
+        table.addCell(String.valueOf(product.getUnitPrice()), centerStyle);
+        table.addCell(String.valueOf(product.getQuantity()), centerStyle);
+        table.addCell(String.valueOf(product.getImportedDate()), centerStyle);
+
+        System.out.println(table.render());
+    }
 }
 

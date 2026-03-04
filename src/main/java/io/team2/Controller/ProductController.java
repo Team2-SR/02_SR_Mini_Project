@@ -90,9 +90,9 @@ public class ProductController {
             case "L" -> handleLastPage();
             case "G" -> handleGoToPage();
 //            case "W" -> ;
-//            case "R" -> ;
+            case "R" -> handleGetById();
 //            case "U" -> ;
-//            case "D" -> ;
+            case "D" -> handleDelete();
 //            case "S" -> ;
             case "SE" -> handleSetRow();
 //            case "Sa" -> ;
@@ -150,6 +150,15 @@ public class ProductController {
         displayMenu();
     }
 
+    private void handleDelete() {
+
+    }
+
+    private void handleGetById() {
+        view.displayProductById(service.getProductByid(InputValidation.readNumber("Enter ID to search: ")));
+        displayMenu();
+
+    }
     private Integer handleExit() {
         return null;
     }

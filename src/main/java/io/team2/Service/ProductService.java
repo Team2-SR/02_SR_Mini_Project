@@ -10,4 +10,6 @@ public interface ProductService {
     void setRow(int input);
     int getRow();
     int getProductSize();
+    void deleteProduct(int id);
+    Product getProductByid(int id);
 }

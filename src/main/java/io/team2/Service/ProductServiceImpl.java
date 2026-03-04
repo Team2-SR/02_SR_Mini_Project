@@ -1,7 +1,6 @@
 package io.team2.Service;
 
 
-import io.team2.Config.DbConn;
 import io.team2.Model.Product;
 import io.team2.Utils.Color;
 
@@ -9,6 +8,7 @@ import java.io.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -98,5 +98,35 @@ public class ProductServiceImpl implements ProductService {
             e.printStackTrace();
         }
         return products;
+    }
+    @Override
+    public void deleteProduct(int id){
+        String sql = "DELETE FROM products WHERE id =?";
+        PreparedStatement ps = null;
+        try {
+            ps = con.prepareStatement(sql);
+            {
+                ps.setInt(1,id);
+                ps.executeUpdate();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public Product getProductByid(int id){
+        String comm = "SELECT id, name,unit_price, quantity,imported_date FROM products WHERE products.id = ?";
+        try (PreparedStatement stmt = con.prepareStatement(comm)) {
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                Product product = new Product().id(rs.getInt("id")).name(rs.getString("name")).unitPrice(rs.getDouble("unit_price")).quantity(rs.getInt("quantity")).importedDate(rs.getDate("imported_date").toLocalDate());
+                return product;
+            }
+            return null;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
