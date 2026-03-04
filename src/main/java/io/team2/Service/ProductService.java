@@ -11,15 +11,11 @@ import java.util.Map;
 
 public interface ProductService {
     List<Product> showProduct(int currentPage, int pageSize);
-
-    int getRow();
-
     void setRow(int input);
-
+    int getRow();
     int getProductSize();
-
-    List<Product> getPendingChanges(ChangeType changeType);
-
-    boolean checkIfNameExists(String name) throws SQLException;
+    void addProduct(Product product);
     Map<CommitStatus, List<Product>> saveChange(ChangeType type) throws SQLException;
+    boolean checkIfNameExists(String name) throws SQLException;
+    List<Product> getPendingChanges(ChangeType changeType);
 }

@@ -89,7 +89,7 @@ public class ProductController {
             case "F" -> handleFirstPage();
             case "L" -> handleLastPage();
             case "G" -> handleGoToPage();
-//            case "W" -> ;
+            case "W" -> handleAddProduct() ;
 //            case "R" -> ;
 //            case "U" -> ;
 //            case "D" -> ;
@@ -158,6 +158,10 @@ public class ProductController {
         int rows = service.getRow();
         return (int) Math.ceil((double) totalProducts / rows);
     }
+    private void handleAddProduct(){
+        service.addProduct(new Product());
+        display();
+    }
 
     private void handleSaveData() {
         ChangeType changeType = readChangeType();
@@ -196,7 +200,7 @@ public class ProductController {
         String input = InputValidation.readMenu("Enter your option : ").toLowerCase();
         while (!input.equals("ui") && !input.equals("uu") && !input.equals("b")) {
             System.out.println(Color.ANSI_RED + "Invalid input! Please enter 'ui', 'uu', or 'b'." + Color.ANSI_RESET);
-            input = InputValidation.readMenu("Enter save type: ").toLowerCase(); // <-- missing here
+            input = InputValidation.readMenu("Enter save type: ").toLowerCase();
         }
 
         return switch (input) {
