@@ -8,10 +8,10 @@ target/
 .idea/jarRepositories.xml
 .idea/compiler.xml
 .idea/libraries/
+.idea
 *.iws
 *.iml
 *.ipr
-.env
 ### Eclipse ###
 .apt_generated
 .classpath
@@ -32,7 +32,10 @@ build/
 !**/src/test/**/build/
 
 ### VS Code ###
-.vscode/
 
 ### Mac OS ###
 .DS_Store
+
+set_row.txt
+config.bat
+node_modules
